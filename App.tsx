@@ -1,4 +1,5 @@
-import * as React from "./core/React"
+/**@jsx JReact.createElement */ // pragma
+import * as JReact from "./core/React"
 
 // @ts-ignore
 const App = <div>dddddddd</div>;
