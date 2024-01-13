@@ -1,6 +1,6 @@
 import { ReactElement } from "./typings"
 
-export const createElement = (type: string, props: object, ...children: ReactElement[]): ReactElement => {
+export const createElement = (type: string, props: object, ...children: ReactElement[] | string[]): ReactElement => {
   return {
     type,
     props: {
@@ -38,7 +38,3 @@ export const render = (element: ReactElement, container: HTMLElement) => {
   container.appendChild(dom)
 }
 
-
-const App = createElement("div", {class: "wrap"}, createElement("p", {}, createTextElement("app")))
-
-export default App

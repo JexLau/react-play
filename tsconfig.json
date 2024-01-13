@@ -23,7 +23,9 @@
     "noUnusedParameters": true,
     "noEmit": true,
     "isolatedModules": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+
+    "jsx": "react"
 
   },
   "include": ["."]
