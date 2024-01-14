@@ -1,4 +1,4 @@
-import { ReactElement } from "./typings"
+import { FiberNode, ReactElement } from "./typings"
 
 export const createElement = (type: string, props: object, ...children: ReactElement[] | string[]): ReactElement => {
   return {
@@ -6,7 +6,7 @@ export const createElement = (type: string, props: object, ...children: ReactEle
     props: {
       ...props,
       children: children.map(child => typeof child === "object" ? child : createTextElement(child))
-    }
+    },
   }
 }
 
@@ -19,22 +19,84 @@ const createTextElement = (text: string): ReactElement => {
     }
   }
 }
+let nextUnitOfWork: FiberNode | null = null;
 
 export const render = (element: ReactElement, container: HTMLElement) => {
-  // 创建dom
-  const dom = element.type === "TEXT_ELEMENT" ? document.createTextNode("") : document.createElement(element.type)
-  // 遍历props
-  const isProperty = (key: string) => key !== "children"
-  Object.keys(element.props).filter(isProperty).forEach(prop => {
-    (dom as any)[prop] = element.props[prop]
-  })
-  // 递归渲染子节点
-  // 排除文本节点
-  if(dom instanceof HTMLElement) {
-    element.props.children?.forEach(child => render(child, dom))
-  } else {
-    element.props.children?.forEach(child => render(child, container))
+  nextUnitOfWork = {
+    // @ts-ignore
+    dom: container,
+    props: {
+      children: [element]
+    }
   }
-  container.appendChild(dom)
+  requestIdleCallback(workLoop)
 }
 
+
+export const workLoop = (deadline: IdleDeadline) => {
+  let shouldYeild = false;
+
+  while (!shouldYeild && nextUnitOfWork) {
+    nextUnitOfWork = performUnitOfWork(nextUnitOfWork)
+    shouldYeild = deadline.timeRemaining() < 1
+  }
+
+  requestIdleCallback(workLoop)
+}
+
+function createDom (type: string) {
+  return type === "TEXT_ELEMENT" ? document.createTextNode("") : document.createElement(type)
+}
+
+
+// 把dom树转换为链表
+// 1. 创建dom树和添加props
+// 2. 把dom树转换为链表: 
+function performUnitOfWork(work: FiberNode | null) {
+  if (!work?.dom) return null
+  // @ts-ignore
+  work.dom = createDom(work.type)
+  const dom =  work.dom
+  // @ts-ignore
+  work.parent?.dom?.append(dom)
+  // 遍历props
+  const isProperty = (key: string) => key !== "children"
+  Object.keys(work.dom.props).filter(isProperty).forEach(prop => {
+    (dom as any)[prop] = work.dom?.props[prop]
+  })
+
+  // 转换为链表, 从这棵树的children开始
+  const children = work.props.children
+  let prevSibling: FiberNode | null = null
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    // 构建fiber节点
+    const newFiber: FiberNode = {
+      dom: child,
+      props: child.props,
+      children: null,
+      parent: work,
+      sibling: null
+    }
+    if (prevSibling) {
+      // 如果有上一个节点, 把上一个节点的sibling设置为当前节点
+      prevSibling.sibling = newFiber
+    } else {
+      // 如果没有上一个节点, 把当前节点设置为children
+      work.children = newFiber
+    }
+    // 把当前节点设置为上一个节点
+    prevSibling = newFiber
+  }
+
+  // 找到下一个工作单元
+  if (work.children) {
+    return work.children
+  }
+  if(work.sibling) {
+    return work.sibling
+  }
+
+  return work.parent?.sibling || null
+
+}
