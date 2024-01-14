@@ -50,52 +50,63 @@ export const workLoop = (deadline: IdleDeadline) => {
 function createDom(type: string) {
   return type === "TEXT_ELEMENT" ? document.createTextNode("") : document.createElement(type)
 }
+
+function updateProps(dom: HTMLElement | Text, props: FiberNode["props"]) {
+  for (let key in props) {
+    if (key !== "children") {
+      (dom as any)[key] = props[key];
+    }
+  }
+};
 // 把dom树转换为链表
 // 1. 创建dom树和添加props
 // 2. 把dom树转换为链表: 
-function performUnitOfWork(work: FiberNode | null) {
-  if (!work?.dom) return null
-  work.dom = createDom(work!.type || "div")
-  const dom = work.dom;
-  (work.parent?.dom as HTMLElement)?.append(dom);
-  // 遍历props
-  Object.keys(work.props).forEach(prop => {
-    if (prop !== "children") {
-      (dom as any)[prop] = work.props[prop]
-    }
-  })
+function performUnitOfWork(fiber: FiberNode | null) {
+  if (!fiber) return null;
+  // 1.挂载dom
+  if (!fiber?.dom) {
+    fiber.dom = createDom(fiber!.type || "div")
+    const dom = fiber.dom;
+    // 遍历props
+    updateProps(dom, fiber.props);
+    // 把dom添加到父节点
+    (fiber.parent?.dom as HTMLElement)?.append(dom);
+  }
+
+
   // 转换为链表, 从这棵树的children开始
-  const children = work.props.children
+  const children = fiber.props.children
   let prevSibling: FiberNode | null = null
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     // 构建fiber节点
     const newFiber: FiberNode = {
-      dom: child,
+      type: child.type,
       props: child.props,
+      parent: fiber,
       children: null,
-      parent: work,
-      sibling: null
+      sibling: null,
+      dom: null,
     }
     if (prevSibling) {
       // 如果有上一个节点, 把上一个节点的sibling设置为当前节点
       prevSibling.sibling = newFiber
     } else {
       // 如果没有上一个节点, 把当前节点设置为children
-      work.children = newFiber
+      fiber.children = newFiber
     }
     // 把当前节点设置为上一个节点
     prevSibling = newFiber
   }
 
   // 找到下一个工作单元
-  if (work.children) {
-    return work.children
+  if (fiber.children) {
+    return fiber.children
   }
-  if (work.sibling) {
-    return work.sibling
+  if (fiber.sibling) {
+    return fiber.sibling
   }
 
-  return work.parent?.sibling || null
+  return fiber.parent?.sibling || null
 
 }
