@@ -8,8 +8,8 @@ export interface ReactElement {
   }
 }
 
-export interface FiberNode {
-  dom:  (HTMLElement | Text) & ReactElement;
+export interface FiberNode extends Partial<ReactElement> {
+  dom:  (HTMLElement | Text);
   props: { [key: string]: any };
   children: FiberNode | null;
   parent: FiberNode | null;
