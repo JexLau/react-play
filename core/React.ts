@@ -37,7 +37,7 @@ export const render = (element: ReactElement, container: HTMLElement) => {
 }
 
 
-export const workLoop = (deadline: IdleDeadline) => {
+const workLoop = (deadline: IdleDeadline) => {
   let shouldYeild = false;
 
   while (!shouldYeild && nextUnitOfWork) {
@@ -89,8 +89,6 @@ function performUnitOfWork(fiber: FiberNode | null) {
     const dom = fiber.dom;
     // 遍历props
     updateProps(dom, fiber.props);
-    // 把dom添加到父节点
-    (fiber.parent?.dom as HTMLElement)?.append(dom);
   }
 
 
