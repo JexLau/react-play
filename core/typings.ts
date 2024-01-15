@@ -1,5 +1,5 @@
 export interface ReactElement {
-  type: string,
+  type: string | Function,
   props: {
     id?: string,
     nodeValue?: string,
@@ -14,4 +14,12 @@ export interface FiberNode extends Partial<ReactElement> {
   children: FiberNode | null;
   parent: FiberNode | null;
   sibling: FiberNode | null;
+}
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      [elemName: string]: any;
+    }
+  }
 }

@@ -45,7 +45,7 @@ const workLoop = (deadline: IdleDeadline) => {
     shouldYeild = deadline.timeRemaining() < 1
   }
 
-  if(!nextUnitOfWork && root) {
+  if (!nextUnitOfWork && root) {
     commitRoot(root)
   }
 
@@ -59,12 +59,20 @@ function commitRoot(fiber: FiberNode) {
 
 function commitWork(fiber: FiberNode | null) {
   if (!fiber) return;
-  const domParent = fiber.parent?.dom
-  if (domParent) {
-    domParent.appendChild(fiber.dom!)
+  let fiberParent = fiber.parent
+  while (!fiberParent?.dom) {
+    fiberParent = fiberParent?.parent || null
   }
+  if (fiber.dom) {
+    fiberParent?.dom?.appendChild(fiber.dom)
+  }
+
   commitWork(fiber.children)
   commitWork(fiber.sibling)
+}
+
+function isFunctionComponent(type: string) {
+  return typeof type === "function"
 }
 
 function createDom(type: string) {
@@ -78,22 +86,8 @@ function updateProps(dom: HTMLElement | Text, props: FiberNode["props"]) {
     }
   }
 };
-// 把dom树转换为链表
-// 1. 创建dom树和添加props
-// 2. 把dom树转换为链表: 
-function performUnitOfWork(fiber: FiberNode | null) {
-  if (!fiber) return null;
-  // 1.挂载dom
-  if (!fiber?.dom) {
-    fiber.dom = createDom(fiber!.type || "div")
-    const dom = fiber.dom;
-    // 遍历props
-    updateProps(dom, fiber.props);
-  }
 
-
-  // 转换为链表, 从这棵树的children开始
-  const children = fiber.props.children
+function initChildren(fiber: FiberNode, children: ReactElement[]) {
   let prevSibling: FiberNode | null = null
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
@@ -116,15 +110,46 @@ function performUnitOfWork(fiber: FiberNode | null) {
     // 把当前节点设置为上一个节点
     prevSibling = newFiber
   }
+}
 
-  // 找到下一个工作单元
+function renderFunctionComponent(fiber: FiberNode) {
+  const children = [(fiber.type as Function)(fiber.props)]
+  initChildren(fiber, children)
+  return children
+}
+
+function renderHostComponent(fiber: FiberNode) {
+  if (!fiber?.dom) {
+    fiber.dom = createDom(fiber!.type as string)
+    const dom = fiber.dom;
+    // 遍历props
+    updateProps(dom, fiber.props);
+  }
+  const children = fiber.props.children
+  initChildren(fiber, children)
+  return fiber.children
+}
+
+function performUnitOfWork(fiber: FiberNode | null) {
+  if (!fiber) return null;
+  // 如果是函数组件, 调用函数, 获取返回值, 否则直接创建dom
+  if (isFunctionComponent(fiber.type as string)) {
+    renderFunctionComponent(fiber)
+  } else {
+    renderHostComponent(fiber)
+  }
+  
   if (fiber.children) {
     return fiber.children
   }
-  if (fiber.sibling) {
-    return fiber.sibling
+
+  let nextFiber: FiberNode | null = fiber
+  while (nextFiber) {
+    if (nextFiber?.sibling) {
+      return nextFiber.sibling
+    }
+    nextFiber = nextFiber.parent
   }
 
-  return fiber.parent?.sibling || null
-
+  return null
 }
