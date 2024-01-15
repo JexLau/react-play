@@ -20,6 +20,7 @@ const createTextElement = (text: string): ReactElement => {
   }
 }
 let nextUnitOfWork: FiberNode | null = null;
+let root: FiberNode | null = null;
 
 export const render = (element: ReactElement, container: HTMLElement) => {
   nextUnitOfWork = {
@@ -31,6 +32,7 @@ export const render = (element: ReactElement, container: HTMLElement) => {
     sibling: null,
     children: null
   }
+  root = nextUnitOfWork
   requestIdleCallback(workLoop)
 }
 
@@ -40,11 +42,29 @@ export const workLoop = (deadline: IdleDeadline) => {
 
   while (!shouldYeild && nextUnitOfWork) {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork)
-    console.log("nextUnitOfWork", nextUnitOfWork)
     shouldYeild = deadline.timeRemaining() < 1
   }
 
+  if(!nextUnitOfWork && root) {
+    commitRoot(root)
+  }
+
   requestIdleCallback(workLoop)
+}
+
+function commitRoot(fiber: FiberNode) {
+  commitWork(fiber.children)
+  root = null
+}
+
+function commitWork(fiber: FiberNode | null) {
+  if (!fiber) return;
+  const domParent = fiber.parent?.dom
+  if (domParent) {
+    domParent.appendChild(fiber.dom!)
+  }
+  commitWork(fiber.children)
+  commitWork(fiber.sibling)
 }
 
 function createDom(type: string) {
