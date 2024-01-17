@@ -14,6 +14,10 @@ export interface FiberNode extends Partial<ReactElement> {
   children: FiberNode | null;
   parent: FiberNode | null;
   sibling: FiberNode | null;
+  // 用于记录当前节点的替身节点, 指针
+  alternate: FiberNode | null;
+  // 用于记录当前节点的操作类型
+  effectTag: "PLACEMENT" | "UPDATE" | "DELETION" | null;
 }
 
 declare global {

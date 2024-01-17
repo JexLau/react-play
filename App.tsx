@@ -1,7 +1,15 @@
 import * as React from "./core/React"
 
-function Counter({ number, bool, }: {number: number, bool?: boolean}) {
-  return <div  onClick={() => console.log('click')}>count: {number} {bool}</div>
+let count = 10;
+const props = { id: 333 }
+function Counter({ number, bool, }: { number: number, bool?: boolean }) {
+  const update = () => {
+    count++;
+    props && (props.id = 444)
+    React.updateDom()
+  }
+
+  return <div {...props} onClick={() => update()}>count:{count}{bool}</div>
 }
 
 function Counter2() {
@@ -9,10 +17,10 @@ function Counter2() {
 }
 
 const App = () => {
-  return <div> hi-mini-react
+  return <div>
     <Counter number={10} bool />
-    <Counter number={20} bool />
-    <Counter2 />
+    {/* <Counter number={20} bool /> */}
+    {/* <Counter2 /> */}
   </div>
 }
 
