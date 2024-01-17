@@ -21,7 +21,7 @@ const createTextElement = (text: string): ReactElement => {
   }
 }
 let nextUnitOfWork: FiberNode | null = null;
-let root: FiberNode | null = null;
+let wipRoot: FiberNode | null = null;
 let currentRoot: FiberNode | null = null;
 
 const workLoop = (deadline: IdleDeadline) => {
@@ -31,8 +31,8 @@ const workLoop = (deadline: IdleDeadline) => {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork)
     shouldYeild = deadline.timeRemaining() < 1
   }
-  if (!nextUnitOfWork && root) {
-    commitRoot(root)
+  if (!nextUnitOfWork && wipRoot) {
+    commitRoot(wipRoot)
   }
 
   requestIdleCallback(workLoop)
@@ -40,8 +40,8 @@ const workLoop = (deadline: IdleDeadline) => {
 
 function commitRoot(fiber: FiberNode) {
   commitWork(fiber.children)
-  currentRoot = root
-  root = null
+  currentRoot = wipRoot
+  wipRoot = null
 }
 
 function commitWork(fiber: FiberNode | null) {
@@ -97,7 +97,7 @@ function updateProps(dom: HTMLElement | Text, nextProps: FiberNode["props"], pre
   }
 };
 
-function initChildren(fiber: FiberNode, children: ReactElement[]) {
+function reconcileChildren(fiber: FiberNode, children: ReactElement[]) {
   let prevChild: FiberNode | null = null
   let oldFiber = fiber.alternate?.children || null
   for (let i = 0; i < children.length; i++) {
@@ -148,7 +148,7 @@ function initChildren(fiber: FiberNode, children: ReactElement[]) {
 
 function renderFunctionComponent(fiber: FiberNode) {
   const children = [(fiber.type as Function)(fiber.props)]
-  initChildren(fiber, children)
+  reconcileChildren(fiber, children)
   return children
 }
 
@@ -160,7 +160,7 @@ function renderHostComponent(fiber: FiberNode) {
     updateProps(dom, fiber.props, fiber.alternate?.props);
   }
   const children = fiber.props.children
-  initChildren(fiber, children)
+  reconcileChildren(fiber, children)
   return fiber.children
 }
 
@@ -189,7 +189,7 @@ function performUnitOfWork(fiber: FiberNode | null) {
 }
 
 export const render = (element: ReactElement, container: HTMLElement) => {
-  nextUnitOfWork = {
+  wipRoot = {
     dom: container,
     props: {
       children: [element],
@@ -200,13 +200,12 @@ export const render = (element: ReactElement, container: HTMLElement) => {
     alternate: null,
     effectTag: "PLACEMENT",
   }
-  root = nextUnitOfWork
+  nextUnitOfWork = wipRoot
   requestIdleCallback(workLoop)
 }
 
 export function updateDom() {
-  console.log('updateDom', currentRoot)
-  nextUnitOfWork = {
+  wipRoot = {
     dom: currentRoot!.dom,
     props: currentRoot!.props,
     alternate: currentRoot || null,
@@ -216,5 +215,5 @@ export function updateDom() {
     effectTag: null
   }
 
-  root = nextUnitOfWork
+  nextUnitOfWork = wipRoot
 }
