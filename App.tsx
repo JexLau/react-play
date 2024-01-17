@@ -1,7 +1,7 @@
 import * as React from "./core/React"
 
-function Counter({ number, bool}: {number: number, bool?: boolean}) {
-  return <div>count: {number} {bool}</div>
+function Counter({ number, bool, }: {number: number, bool?: boolean}) {
+  return <div  onClick={() => console.log('click')}>count: {number} {bool}</div>
 }
 
 function Counter2() {

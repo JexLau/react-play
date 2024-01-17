@@ -82,7 +82,12 @@ function createDom(type: string) {
 function updateProps(dom: HTMLElement | Text, props: FiberNode["props"]) {
   for (let key in props) {
     if (key !== "children") {
-      (dom as any)[key] = props[key];
+      if(key.startsWith("on")) {
+        const eventName = key.slice(2).toLowerCase()
+        dom.addEventListener(eventName, props[key])
+      } else {
+        (dom as any)[key] = props[key];
+      }
     }
   }
 };
